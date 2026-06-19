@@ -45,11 +45,11 @@ mkdir $wesconf{outdir} unless -d $wesconf{outdir};
 my $slurmdir = $wesconf{outdir}.'/slurm';
 mkdir $slurmdir unless -d $slurmdir;
 
-my %ptask = (cpus => 8, job_name => 'wes', time => '8:0:0', mem_per_cpu => '4G', debug => $debug);
+my %ptask = (cpus => 8, job_name => 'wes', time => '72:0:0', mem_per_cpu => '4G', debug => $debug);
 
 die "No such directory mate\n" unless -d $wesconf{src_dir};
-my @content = find(file => 'name' => "*$wesconf{search_pattern}", in => $wesconf{src_dir});
-my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}$/; $1 => $_} @content;
+my @content = find(file => 'name' => "*$wesconf{search_pattern}*", in => $wesconf{src_dir});
+my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}.*$/; $1 => $_} @content;
 my @cuts;
 if ($cfile) {
 	open IDF, "<$cfile" or die "No such input file!\n";

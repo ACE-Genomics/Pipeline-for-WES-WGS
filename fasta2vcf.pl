@@ -12,6 +12,7 @@ use Cwd;
 use FindBin;
 use lib "$FindBin::Bin";
 use wxsInit; 
+use Data::Dump qw(dump);
 ############################################# 
 # See: 
 #   - For WES pipeline: http://detritus.fundacioace.com/wiki/doku.php?id=genetica:wes 
@@ -65,8 +66,9 @@ if ($cfile and -f $cfile) {
 }
 my %ptask = (cpus => 8, time => ($mode  eq 'wgs')?'72:0:0':'24:0:0', mem_per_cpu => '4G', debug => $test);
 die "No such directory mate\n" unless -d $wesconf{src_dir};
-my @content = find(file => 'name' => "*$wesconf{search_pattern}", in => $wesconf{src_dir});
-my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}$/; $1 => $_} @content;
+my @content = find(file => 'name' => "*$wesconf{search_pattern}*", in => $wesconf{src_dir});
+my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}.*$/; $1 => $_} @content;
+#dump %pollos; exit;
 my @jobs;
 foreach my $pollo (sort keys %pollos){
 	my @ljobids;
