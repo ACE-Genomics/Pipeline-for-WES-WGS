@@ -111,7 +111,7 @@ reusing a HASH then this key should be deleted from it.
 sub slurmexec{
 	my %task = %{$_[0]};
 	my %dtask = default_task;
-	foreach my $p (keys %task){
+	foreach my $p (keys %dtask){
 		$task{$p} = $dtask{$p} unless $task{$p};
 	}
 	my $scriptfile = $task{filename};
