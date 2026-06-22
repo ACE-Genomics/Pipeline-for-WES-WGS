@@ -33,7 +33,7 @@ sub default_task{
 	$task{'filename'} = 'slurm_'.$label.'.sh';
 	$task{'output'} = 'slurm_'.$label.'.out';
 	$task{'job-name'} = 'myjob';
-	$task{'mailtype'} = 'FAIL,TIME_LIMIT,STAGE_OUT';
+	$task{'mail-type'} = 'FAIL,TIME_LIMIT,STAGE_OUT';
 	return %task;
 }
 
@@ -120,7 +120,14 @@ sub slurmexec{
 	if (exists($task{command}) and $task{command}){
 		$command = $task{command};
 		delete $task{command};
+	}else{
+	# Here I'm going to do a thing: If there is no commmand, the script 
+	# warns when it ends, unless another shit is specified in the hash
+		unless (exists($task{'mail-type'}) and $task{'mail-type'}){
+			$task{'mail-type'} = 'END';
+		}
 	}
+
 	my $debug = $task{debug};
 	delete $task{debug};
 	my $order;

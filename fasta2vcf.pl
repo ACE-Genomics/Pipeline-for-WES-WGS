@@ -201,6 +201,6 @@ foreach my $pollo (sort keys %pollos){
 	} 
 } 
 unless ($test) {
-	my %wtask = ('cpus-per-task' => 1, 'job-name' => 'end_wes', filename => $slurmdir.'/end.sh', output => $slurmdir.'/end.out', dependency => 'afterok:'.join(',afterok:',@jobs));
+	my %wtask = ('cpus-per-task' => 1, 'mail-type' => 'END','job-name' => 'end_wes', filename => $slurmdir.'/end.sh', output => $slurmdir.'/end.out', dependency => 'afterok:'.join(',afterok:',@jobs));
 	slurmexec(\%wtask);
 }

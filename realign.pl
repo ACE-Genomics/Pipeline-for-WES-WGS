@@ -66,7 +66,7 @@ my @mlist = find(file => 'name' => qr/$wesconf{search_pattern}$/, in => $wesconf
 @mlist = grep {!/.*$wesconf{cleaner}.*/} @mlist if exists($wesconf{cleaner}) and $wesconf{cleaner};
 my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}$/; $1 => $_} @mlist;
 # Lets process now
-my %cdata = ("-c" => 4, time => '24:0:0', 'mem-per-cpu' => '4G', debug => $test);
+my %cdata = ('cpus-per-task' => 4, time => '24:0:0', 'mem-per-cpu' => '4G', debug => $test);
 my @jobs;
 foreach my $pollo (sort keys %pollos){
 	my $go = 0;
