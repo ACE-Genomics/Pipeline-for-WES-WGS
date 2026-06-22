@@ -112,7 +112,9 @@ sub slurmexec{
 	my %task = %{$_[0]};
 	my %dtask = default_task;
 	foreach my $p (keys %dtask){
-		$task{$p} = $dtask{$p} unless $task{$p};
+		unless (exists($task{$p}) and $task{$p}){
+			$task{$p} = $dtask{$p};
+		}
 	}
 	my $scriptfile = $task{filename};
 	delete $task{filename};
