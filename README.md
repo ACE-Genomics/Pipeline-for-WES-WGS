@@ -124,7 +124,7 @@ The scripts has also some basic input options to do some testing in your sample,
 
 ## TO DO
    
-   * More test on real data
+   * Test slurmExec library on real data
    * More docs!
 
 
