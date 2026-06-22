@@ -6,13 +6,8 @@ Parallel processing for whole exome sequencing (WES) or whole genome sequencing 
 
 ## Before you go
 
-These scripts use SLURMACE library. To install it just run the *install\_slurmace.sh* script provided here. This should install the perl module into your local PERL5 directory.
 
-```bash
-curl -sL https://raw.githubusercontent.com/asqwerty666/wespipe/refs/heads/main/install_slurmace.sh | bash
-```
-
-**Also, in order to the scripts work properly, you should edit the module *wxsInit.pm* guaranteeing that you local reference data and executable paths are found.**
+In order to the scripts work properly, you should edit the module *wxsInit.pm* guaranteeing that you local reference data and executable paths are found.
 
 ## scripts
 
