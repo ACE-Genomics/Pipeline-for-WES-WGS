@@ -6,13 +6,14 @@
 #
 use strict;
 use warnings;
-use SLURMACE qw(send2slurm);
+#use SLURMACE qw(send2slurm);
 use File::Find::Rule;
 use Cwd;
 use File::Temp qw( :mktemp tempdir);
 use FindBin; 
 use lib "$FindBin::Bin";
 use wxsInit;
+use sllurmExec;
 my $cfile;
 my $outdir;
 my $workdir = getcwd;
@@ -45,7 +46,7 @@ mkdir $wesconf{outdir} unless -d $wesconf{outdir};
 my $slurmdir = $wesconf{outdir}.'/slurm';
 mkdir $slurmdir unless -d $slurmdir;
 
-my %ptask = (cpus => 8, job_name => 'wes', time => '72:0:0', mem_per_cpu => '4G', debug => $debug);
+my %ptask = ('cpus-per-task' => 8, 'job-name' => 'wes', time => '72:0:0', 'mem-per-cpu' => '4G', debug => $debug);
 
 die "No such directory mate\n" unless -d $wesconf{src_dir};
 my @content = find(file => 'name' => "*$wesconf{search_pattern}*", in => $wesconf{src_dir});
@@ -67,7 +68,7 @@ foreach my $shit (sort keys %pollos){
 		$go = 1;
 	}
 	if (-f $pollos{$shit} and $go) {
-		$ptask{job_name} = 'compact_data';
+		$ptask{'job-name'} = 'compact_data';
 		$ptask{filename} = $slurmdir.'/'.$shit.'.sh';
 		$ptask{output} = $slurmdir.'/'.$shit.'.out';
 		(my $another = $pollos{$shit}) =~ s/$wesconf{search_pattern}/$wesconf{alt_pattern}/;
@@ -75,11 +76,11 @@ foreach my $shit (sort keys %pollos){
 		$ptask{command} = $epaths{bwa}.' -R '.$rg.' '.$ref_fa.' '.$pollos{$shit}.' '.$another.' | '.$epaths{gatk}.' SortSam -I /dev/stdin -O '.$tmpdir.'/'.$shit.'_sorted.bam --SORT_ORDER coordinate --CREATE_INDEX true'." --TMP_DIR $tmp_shit\n";
 		$ptask{command}.= $epaths{samtools}.' view -@ 8 -T '.$ref_fa.' -C -o '.$wesconf{outdir}.'/'.$shit.'.cram '.$tmpdir.'/'.$shit.'_sorted.bam'."\n";
 		$ptask{command}.= 'rm '.$tmpdir.'/'.$shit.'_sorted.bam';
-		send2slurm(\%ptask);
+		slurmexec(\%ptask);
 	}
 }
 
 unless ($debug) {
-	my %warn = (filename => $slurmdir.'/compact_end.sh', output => $slurmdir.'/compact_end.out', job_name => 'compact_data', mailtype => 'END', dependency => 'singleton');
-	send2slurm(\%warn);
-}
+	my %warn = (filename => $slurmdir.'/compact_end.sh', output => $slurmdir.'/compact_end.out', 'job-name' => 'compact_data', 'mail-type' => 'END', dependency => 'singleton');
+	slurmexec(\%warn);
+

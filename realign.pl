@@ -6,11 +6,12 @@
 #
 use strict;
 use warnings;
-use SLURMACE;
+#use SLURMACE;
 use File::Find::Rule;
 use FindBin; 
 use lib "$FindBin::Bin";
 use wxsInit;
+use slurmExec;
 use Data::Dump qw(dump);
 #############################################
 # See:
@@ -65,7 +66,7 @@ my @mlist = find(file => 'name' => qr/$wesconf{search_pattern}$/, in => $wesconf
 @mlist = grep {!/.*$wesconf{cleaner}.*/} @mlist if exists($wesconf{cleaner}) and $wesconf{cleaner};
 my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}$/; $1 => $_} @mlist;
 # Lets process now
-my %cdata = (cpus => 4, time => '24:0:0', mem_per_cpu => '4G', debug => $test);
+my %cdata = ("-c" => 4, time => '24:0:0', 'mem-per-cpu' => '4G', debug => $test);
 my @jobs;
 foreach my $pollo (sort keys %pollos){
 	my $go = 0;
@@ -83,7 +84,7 @@ foreach my $pollo (sort keys %pollos){
 			       %params = ($inq =~ /^\@RG\t(\w+):(\w+)\t(\w+):(\w+)\t(\w+):(\w+)\t(\w+):(\w+)$/);
 		       }
 		}
-		$cdata{job_name} = $pollo.'_RevertSam';
+		$cdata{'job-name'} = $pollo.'_RevertSam';
 		$cdata{filename} = $slurmdir.'/'.$pollo.'_RevertSam.sh';
 		$cdata{output} =  $slurmdir.'/'.$pollo.'_RevertSam.out';
 		$cdata{command} = "mkdir -p $tmpdir\n";
@@ -95,12 +96,12 @@ foreach my $pollo (sort keys %pollos){
 		$cdata{command}.= "$epaths{gatk} MergeBamAlignment -ALIGNED $tmpdir/$pollo"."_salignment.sam -UNMAPPED $tmpdir/$pollo"."_us.bam -R $ref_fa -O $tmpdir/$pollo"."_merged.bam\n";
 		$cdata{command}.= "$epaths{gatk} AddOrReplaceReadGroups -I  $tmpdir/$pollo"."_merged.bam -O $wesconf{outdir}/$pollo.sam -ID $params{ID} -PL $params{PL} -LB $params{LB} -PU $params{ID} -SM $params{SM}\n";
 		$cdata{command}.= "rm -rf $tmpdir\n" unless $debug;
-		my $jid = send2slurm(\%cdata);
+		my $jid = slurmexec(\%cdata);
 		push @jobs, $jid;
 	}
 }
 unless ($test) {
-	my %wtask = (cpus => 1, job_name => 'end_wes', filename => $slurmdir.'/end.sh', output => $slurmdir.'/end.out', dependency => 'afterok:'.join(',afterok:',@jobs));
-	send2slurm(\%wtask);
+	my %wtask = ('cpus-per-task' => 1, 'job-name' => 'end_wes', filename => $slurmdir.'/end.sh', output => $slurmdir.'/end.out', dependency => 'afterok:'.join(',afterok:',@jobs));
+	slurmexec(\%wtask);
 }
 

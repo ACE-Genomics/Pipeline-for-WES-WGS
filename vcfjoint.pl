@@ -5,7 +5,7 @@
 # This script is intended for making the joint call with the gVCF files
 use strict; 
 use warnings; 
-use SLURMACE; 
+#use SLURMACE; 
 use File::Find::Rule;
 use File::Basename;
 use File::Temp qw(:mktemp);
@@ -13,6 +13,7 @@ use Cwd;
 use FindBin; 
 use lib "$FindBin::Bin";
 use wxsInit; 
+use slurmExec;
 use Data::Dump qw(dump);
 ############################################# 
 # See: 
@@ -80,7 +81,7 @@ foreach my $pollo (sort keys %pollos){
 	print LDF "$pollo\t$pollos{$pollo}\n" if not @plist or grep {/$pollo/} @plist;
 }
 close LDF;
-my %ptask = (cpus => 32, time => '288:0:0', mem_per_cpu => '4G', debug => $test);
+my %ptask = ('cpus-per-task' => 32, time => '288:0:0', 'mem-per-cpu' => '4G', debug => $test);
 my @jobs;
 my @tmp_joint;
 my $resss_snp = '--resource:hapmap,known=false,training=true,truth=true,prior=15.0 '.$dpaths{ref_dir}.'/'.$dpaths{hapmap}.' --resource:omni,known=false,training=true,truth=false,prior=12.0 '.$dpaths{ref_dir}.'/'.$dpaths{omni}.' --resource:1000G,known=false,training=true,truth=false,prior=10.0 '.$dpaths{ref_dir}.'/'.$dpaths{hcsnps}.' --resource:dbsnp,known=true,training=false,truth=false,prior=2.0 '.$dpaths{ref_dir}.'/'.$dpaths{dbsnp};
@@ -88,17 +89,17 @@ my $resss_indel = '--resource:mills,known=false,training=true,truth=true,prior=1
 my $troptions_snp = (($mode eq 'wgs')?'-an DP ':'').'-an QD -an ReadPosRankSum -an FS -an SOR -an MQ -an MQRankSum -mode SNP --max-gaussians 2 --trust-all-polymorphic -tranche 100.0 -tranche 99.9 -tranche 99.8 -tranche 99.7 -tranche 99.6 -tranche 99.5 -tranche 99.4 -tranche 99.3 -tranche 99.2 -tranche 99.0 -tranche 90.0';
 my $troptions_indel = (($mode eq 'wgs')?'-an DP ':'').'-an QD -an ReadPosRankSum -an FS -an SOR -an MQ -an MQRankSum -mode INDEL --max-gaussians 4 --trust-all-polymorphic -tranche 100.0 -tranche 99.9 -tranche 99.8 -tranche 99.7 -tranche 99.6 -tranche 99.5 -tranche 99.4 -tranche 99.3 -tranche 99.2 -tranche 99.0 -tranche 90.0';
 foreach my $chr (@chrs){
-	$ptask{job_name} = 'GenotypeGVCFs_'.$chr;
+	$ptask{'job-name'} = 'GenotypeGVCFs_'.$chr;
 	$ptask{filename} = $slurmdir.'/'.$chr.'_GenotypeGVCFs_'.$chr.'.sh';
 	$ptask{output} = $slurmdir.'/'.$chr.'_GenotypeGVCFs_'.$chr.'.out';
 	my $dbdir = "$tmp_shit/wes.chr$chr.db";
 	$ptask{command} = "$epaths{gatk} GenomicsDBImport --genomicsdb-workspace-path $dbdir --batch-size 50 --sample-name-map $hencoop  -L chr$chr  --reader-threads 8\n";
 	$ptask{command}.= "$epaths{gatk}  GenotypeGVCFs -R $ref_fa  -V gendb://$dbdir -G StandardAnnotation -G AS_StandardAnnotation -O $tmp_shit/wes.chr$chr.snps.indels.g.vcf.gz\n";
-	my $jid = send2slurm(\%ptask);
+	my $jid = slurmexec(\%ptask);
 	push @jobs, $jid;
 	push @tmp_joint, "$tmp_shit/wes.chr$chr.snps.indels.g.vcf.gz";
 }
-my %gtask = (cpus => 24, time => '72:0:0', mem_per_cpu => '4G', debug => $test, job_name => 'gather', filename => "$slurmdir/gather.sh", 'output' => "$slurmdir/gather.out", dependency => 'afterok:'.join(',afterok:', @jobs));
+my %gtask = ('cpus-per-task' => 24, time => '72:0:0', 'mem-per-cpu' => '4G', debug => $test, 'job-name' => 'gather', filename => "$slurmdir/gather.sh", 'output' => "$slurmdir/gather.out", dependency => 'afterok:'.join(',afterok:', @jobs));
 my $ppool = join(' -I ', @tmp_joint);
 $gtask{command} = "$epaths{gatk} GatherVcfs -I $ppool -O $tmp_shit/wes_joint_chr_norec.vcf.gz\n";
 $gtask{command}.= "$epaths{gatk} IndexFeatureFile -I $tmp_shit/wes_joint_chr_norec.vcf.gz\n";
@@ -109,8 +110,8 @@ $gtask{command}.= "$epaths{gatk}  ApplyVQSR -R $ref_fa -V $tmp_shit/wes_joint_ch
 $gtask{command}.= "mkdir $wesconf{outdir}/tables\n";
 #$gtask{command}.= "rm -rf $tmp_shit";
 #$gtask{mailtype} = 'FAIL,TIME_LIMIT,STAGE_OUT,END';
-my $jjob = send2slurm(\%gtask);
-my %trjob = ('cpus' => 4, 'time' => '8:0:0', 'mem_per_cpu' => '4G', 'job_name' => 'fucktranches', dependency => 'afterok:'.$jjob,  debug => $test);
+my $jjob = slurmexec(\%gtask);
+my %trjob = ('cpus-per-task' => 4, 'time' => '8:0:0', 'mem-per-cpu' => '4G', 'job-name' => 'fucktranches', dependency => 'afterok:'.$jjob,  debug => $test);
 my @trjobs;
 foreach my $tranche (@tranches) {
 	(my $str_tranche = $tranche) =~ s/\.//;
@@ -118,10 +119,10 @@ foreach my $tranche (@tranches) {
 	$trjob{'output'} = $slurmdir.'/'.$str_tranche.'.out';
 	$trjob{'command'} = "$epaths{gatk} ApplyVQSR -R $ref_fa -V $wesconf{outdir}/".$prj."wes_joint_chr.snps.indels.g_recalibrated.vcf.gz -mode SNP --truth-sensitivity-filter-level $tranche --recal-file $wesconf{outdir}/wes_joint_chr.snps.recal --tranches-file $wesconf{outdir}/".$prj."wes_joint_chr.snps.recalibrate.tranches -O $wesconf{outdir}/tables/wes_joint_snps.$str_tranche.vcf.gz\n";
 	$trjob{'command'} .= "$epaths{gatk} VariantsToTable  -R $ref_fa -V $wesconf{outdir}/tables/wes_joint_snps.$str_tranche.vcf.gz -F CHROM -F POS -F DP -F FILTER -F MQ -F QD -F FS -F SOR -F MQRankSum -F ReadPosRankSum -O $wesconf{outdir}/tables/wes_joint.$str_tranche.table\n";
-	my $trjobid = send2slurm(\%trjob);
+	my $trjobid = slurmexec(\%trjob);
 	push @trjobs, $trjobid;
 }
-my %warn = ('job_name' => 'fucktranches', 'filename' => $slurmdir.'/tend.sh', 'mailtype' => 'END', 'dependency' => 'afterok:'.join(',afterok:', @trjobs), 'output' =>  $slurmdir.'/tend.out',  debug => $test);
+my %warn = ('job-name' => 'fucktranches', 'filename' => $slurmdir.'/tend.sh', 'mail-type' => 'END', 'dependency' => 'afterok:'.join(',afterok:', @trjobs), 'output' =>  $slurmdir.'/tend.out',  debug => $test);
 $warn{command} = "rm -rf $tmp_shit $wesconf{outdir}/tables/*.vcf.*\n";
-send2slurm(\%warn);
+slurmexec(\%warn);
 

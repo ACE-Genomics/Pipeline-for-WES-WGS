@@ -6,7 +6,7 @@
 #
 use strict;
 use warnings;
-use SLURMACE qw(send2slurm);
+#use SLURMACE qw(send2slurm);
 use File::Find::Rule;
 use File::Slurp qw(read_file);
 use Cwd;
@@ -14,6 +14,7 @@ use File::Temp qw( :mktemp tempdir);
 use FindBin; 
 use lib "$FindBin::Bin";
 use wxsInit;
+use slurmExec;
 use String::Random;
 use Data::Dump qw(dump);
 my $cfile;
@@ -48,7 +49,7 @@ mkdir $wesconf{outdir} unless -d $wesconf{outdir};
 my $slurmdir = $wesconf{outdir}.'/slurm';
 mkdir $slurmdir unless -d $slurmdir;
 
-my %ptask = (cpus => 8, job_name => 'wes', time => '8:0:0', mem_per_cpu => '4G', debug => $debug);
+my %ptask = ('cpus-per-task' => 8, 'job-name' => 'wes', time => '8:0:0', 'mem-per-cpu' => '4G', debug => $debug);
 
 my $debug_file = $wesconf{outdir}.'/.debug_report_'.getLoggingTime().'.log';
 open STDOUT, ">$debug_file" or die "Can't redirect stdout";
@@ -79,7 +80,7 @@ foreach my $chick_path (@chicks){
 			}else{
 				($sample = $shit) =~  s/_\d+$//;
 			}
-			$ptask{job_name} = 'create_bam_'.$ultra_shit;
+			$ptask{'job-name'} = 'create_bam_'.$ultra_shit;
 			$ptask{filename} = $slurmdir.'/'.$ultra_shit.'.sh';
 			$ptask{output} = $slurmdir.'/'.$ultra_shit.'.out';
 			(my $another = $pollos{$shit}) =~ s/$wesconf{search_pattern}/$wesconf{alt_pattern}/;
@@ -88,14 +89,14 @@ foreach my $chick_path (@chicks){
 			$ptask{command}.= $epaths{samtools}.' calmd -bAr '.$tmpdir.'/'.$ultra_shit.'_sorted.bam '.$ref_fa.' > '.$tmpdir.'/'.$ultra_shit.'_calmd.bam'."\n";
 			push @chick_group, $tmpdir.'/'.$ultra_shit.'_calmd.bam';
 			push @chick_tmp, $tmpdir.'/'.$ultra_shit.'_sorted.bam';
-			my $job_id = send2slurm(\%ptask); 
+			my $job_id = slurmexec(\%ptask); 
 			push @jobs, $job_id;
 		}
 	}
 	my $rname = String::Random->new;
 	my $chick = $rname->randpattern("CCCCCCCC");
 	print "$chick,$chick_path\n";
-	$ptask{job_name} = 'compact_data';
+	$ptask{'job-name'} = 'compact_data';
 	$ptask{filename} = $slurmdir.'/'.$chick.'.sh';
 	$ptask{output} = $slurmdir.'/'.$chick.'.out';
 	my $chl = join ' ',@chick_group;
@@ -108,9 +109,9 @@ foreach my $chick_path (@chicks){
 	#$ptask{command}.= 'rm '.$tmpdir.'/'.$chick.'.bam '.$chl.' '.$tmpdir.'/'.$chick.'_rmdup.bam';
 	$ptask{command}.= 'rm '.$tmpdir.'/'.$chick.'.bam '.$chl.' '.$chtmp;
 	$ptask{dependency} = 'afterok:'.join(',afterok:',@jobs);
-	send2slurm(\%ptask);
+	slurmexec(\%ptask);
 }
 unless ($debug) {
-	my %warn = (filename => $slurmdir.'/compact_end.sh', output => $slurmdir.'/compact_end.out', job_name => 'compact_data', mailtype => 'END', dependency => 'singleton');
-	send2slurm(\%warn);
+	my %warn = (filename => $slurmdir.'/compact_end.sh', output => $slurmdir.'/compact_end.out', 'job-name' => 'compact_data', 'mail-type' => 'END', dependency => 'singleton');
+	slurmexec(\%warn);
 }

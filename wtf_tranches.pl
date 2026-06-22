@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use SLURMACE qw(send2slurm wait4jobs);
+#use SLURMACE qw(send2slurm wait4jobs);
 use Cwd;
 use FindBin; 
 use lib "$FindBin::Bin";
 use wxsInit;
+use slurmExec;
 my $init;
 while (@ARGV and $ARGV[0] =~ /^-/) {
 	$_ = shift;
@@ -30,14 +31,14 @@ my $ofile = $tables_dir.'/wes_joint_alltranches.table';
 mkdir $sdir unless -d $sdir;
 mkdir $tables_dir unless -d $tables_dir;
 my @jobs;
-my %trjob = ('cpus' => 4, 'time' => '8:0:0', 'mem_per_cpu' => '4G', 'job_name' => 'fucktranches');
+my %trjob = ('cpus-per-task' => 4, 'time' => '8:0:0', 'mem-per-cpu' => '4G', 'job-name' => 'fucktranches');
 foreach my $tranche (@tranches) {
 	(my $str_tranche = $tranche) =~ s/\.//;
 	$trjob{'filename'} = $sdir.'/'.$str_tranche.'.sh';
 	$trjob{'output'} = $sdir.'/'.$str_tranche.'.out';
 	$trjob{'command'} = "$GATK ApplyVQSR -R $ref -V $base_dir/wes_joint_chr.snps.indels.g_recalibrated.vcf.gz -mode SNP --truth-sensitivity-filter-level $tranche --recal-file $base_dir/wes_joint_chr.snps.recal --tranches-file $base_dir/wes_joint_chr.snps.recalibrate.tranches -O $tables_dir/wes_joint_snps.$str_tranche.vcf.gz\n";
 	$trjob{'command'} .= "$GATK VariantsToTable  -R $ref -V $tables_dir/wes_joint_snps.$str_tranche.vcf.gz -F CHROM -F POS -F DP -F FILTER -F MQ -F QD -F FS -F SOR -F MQRankSum -F ReadPosRankSum -O $tables_dir/wes_joint.$str_tranche.table";
-	my $jobid = send2slurm(\%trjob);
+	my $jobid = slurmexec(\%trjob);
 	push @jobs, $jobid;
 }
 wait4jobs(@jobs);
