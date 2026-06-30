@@ -13,7 +13,8 @@ use File::Temp qw( :mktemp tempdir);
 use FindBin; 
 use lib "$FindBin::Bin";
 use wxsInit;
-use sllurmExec;
+use slurmExec;
+use Data::Dump qw(dump);
 my $cfile;
 my $outdir;
 my $workdir = getcwd;
@@ -71,7 +72,10 @@ foreach my $shit (sort keys %pollos){
 		$ptask{'job-name'} = 'compact_data';
 		$ptask{filename} = $slurmdir.'/'.$shit.'.sh';
 		$ptask{output} = $slurmdir.'/'.$shit.'.out';
-		(my $another = $pollos{$shit}) =~ s/$wesconf{search_pattern}/$wesconf{alt_pattern}/;
+		# (my $another = $pollos{$shit}) =~ s/$wesconf{search_pattern}/$wesconf{alt_pattern}/;
+		#####Solo para los de lille borrar despues ##########################################
+		(my $another = $pollos{$shit}) =~ s/_(\d)_1_/_${1}_2_/;
+		########################################## ##########################################
 		my $rg = '"@RG\\tID:'.$shit.'\\tPL:'.$wesconf{platform}.'\\tLB:'.$wesconf{libraries}.'\\tSM:'.$shit.'"';
 		$ptask{command} = $epaths{bwa}.' -R '.$rg.' '.$ref_fa.' '.$pollos{$shit}.' '.$another.' | '.$epaths{gatk}.' SortSam -I /dev/stdin -O '.$tmpdir.'/'.$shit.'_sorted.bam --SORT_ORDER coordinate --CREATE_INDEX true'." --TMP_DIR $tmp_shit\n";
 		$ptask{command}.= $epaths{samtools}.' view -@ 8 -T '.$ref_fa.' -C -o '.$wesconf{outdir}.'/'.$shit.'.cram '.$tmpdir.'/'.$shit.'_sorted.bam'."\n";
@@ -83,4 +87,4 @@ foreach my $shit (sort keys %pollos){
 unless ($debug) {
 	my %warn = (filename => $slurmdir.'/compact_end.sh', output => $slurmdir.'/compact_end.out', 'job-name' => 'compact_data', 'mail-type' => 'END', dependency => 'singleton');
 	slurmexec(\%warn);
-
+}
