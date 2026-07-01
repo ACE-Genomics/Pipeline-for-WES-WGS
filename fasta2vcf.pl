@@ -68,6 +68,7 @@ if ($cfile and -f $cfile) {
 my %ptask = ('cpus-per-task' => 8, time => ($mode  eq 'wgs')?'72:0:0':'24:0:0', 'mem-per-cpu' => '4G', debug => $test);
 die "No such directory mate\n" unless -d $wesconf{src_dir};
 my @content = find(file => 'name' => "*$wesconf{search_pattern}*", in => $wesconf{src_dir});
+@content = grep {!/.*$wesconf{cleaner}.*/} @content if exists($wesconf{cleaner}) and $wesconf{cleaner};
 my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}.*$/; $1 => $_} @content;
 #dump %pollos; exit;
 my @jobs;

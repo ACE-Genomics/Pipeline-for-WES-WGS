@@ -51,6 +51,7 @@ my %ptask = ('cpus-per-task' => 8, 'job-name' => 'wes', time => '72:0:0', 'mem-p
 
 die "No such directory mate\n" unless -d $wesconf{src_dir};
 my @content = find(file => 'name' => "*$wesconf{search_pattern}*", in => $wesconf{src_dir});
+@content = grep {!/.*$wesconf{cleaner}.*/} @content if exists($wesconf{cleaner}) and $wesconf{cleaner};
 my %pollos = map {/.*\/(\w+?)$wesconf{search_pattern}.*$/; $1 => $_} @content;
 my @cuts;
 if ($cfile) {
